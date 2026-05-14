@@ -7,7 +7,6 @@ library(rmcorr)
 # ------- 0. LOAD & CLEAN DATA --------------------------
 
 raw <- read_excel("our_data.xlsx", sheet = "Performance+Presence")
-#raw <- read_excel("6. Semester/Projekt/Databehandling/our_data.xlsx", sheet = "Performance+Presence")
 
 df <- raw %>% select(
   id = 'Participant',
@@ -19,15 +18,44 @@ df <- raw %>% select(
   trigger_presses = 'Trigger Presses',
   presence = "Presence Score")
 
-scatter_captured <- ggplot(df, aes(presence, captured))
-scatter_captured + geom_point() + geom_smooth(method = "lm") + ggtitle("Captured ghost vs Presence")
 
-scatter_held <- ggplot(df, aes(presence, toys_held))
-scatter_held + geom_point() + geom_smooth(method = "lm") + ggtitle("Toys held vs Presence")
+# ------- 1. LINEAR MIXED MODEL --------------------------
+cat("====== trigger_presses ~ Presence (LMM) ======\n")
+model <- lmer(presence ~ trigger_presses + (1 | id), data = df)
+s <- summary(model)
+print(s)
 
-scatter_trigger <- ggplot(df, aes(presence, trigger_presses))
-scatter_trigger + geom_point() + geom_smooth(method = "lm") + ggtitle("Trigger presses vs Presence")
+# Extract values for plot annotation
+beta <- fixef(model)["trigger_presses"]
+pval <- coef(s)["trigger_presses", "Pr(>|t|)"]
+r2 <- as.numeric(MuMIn::r.squaredGLMM(model)[,"R2m"])
 
-cor(df$presence, df$captured, use="complete.obs", method="spearman")
-cor(df$presence, df$toys_held, use="complete.obs", method="spearman")
-cor(df$presence, df$trigger_presses, use="complete.obs", method="spearman")
+# Format label
+sig_stars <- ifelse(pval < 0.01, "**", ifelse(pval < 0.05, "*", "Not significant"))
+annot_label <- sprintf("β = %.3f, p = %.3f %s\nMarginal R² = %.3f", beta, pval, sig_stars, r2)
+
+# ------- 2. PLOT --------------------------
+p <- ggplot(df, aes(x = trigger_presses, y = presence)) +
+  geom_point(alpha = 0.6, size = 2) +
+  geom_smooth(method = "lm", se = TRUE, color = "black", linewidth = 1) +
+  annotate(
+    "text",
+    x = Inf, y = Inf,              # top-right corner
+    hjust = 1.05, vjust = 1.5,    # nudge inward from edge
+    label = annot_label,
+    size = 4.5,
+    fontface = "italic"
+  ) +
+  labs(
+    y = "Presence Score",
+    x = "Trigger Presses"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x  = element_text(size = 16),
+    axis.text.y  = element_text(size = 16)
+  )
+
+plot(p)

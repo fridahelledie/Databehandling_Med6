@@ -30,7 +30,7 @@ sw_ghostdir <- df %>%
 print(sw_ghostdir)
 
 
-# ------- 2. GHOST DIRECTION EFFECT LLM --------------------------
+# ------- 2. GHOST DIRECTION EFFECT LMM --------------------------
 
 cat("\n=== GHOST DIRECTION EFFECT LINEAR MIXED MODEL ===\n")
 
