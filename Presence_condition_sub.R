@@ -8,20 +8,22 @@ library(ez)
 # ------- 0. LOAD & CLEAN DATA --------------------------
 
 #raw <- read_excel("our_data.xlsx", sheet = "VAS")
-#raw <- read_excel("6. Semester/Projekt/Databehandling/our_data.xlsx", sheet = "Presence")
-raw <- read_excel("our_data.xlsx", sheet = "Presence")
+raw <- read_excel("6. Semester/Projekt/Databehandling/our_data.xlsx", sheet = "Pain+Presence")
 
 # Keep only the columns we need and give them tidy names
 df <- raw %>%
   select(
     id = `Participant ID.`,
     condition = Condition,
-    order = Order,
-    sequence = Sequence,
     presence_score = `Presence Score`,
+    responsive = s_2,
+    natural = `s_3`,
+    consistent = `s_7`,
+    involved = `s_13`,
+    subitems = `Subitems`
   ) %>%
   
-filter(!(id%in% c(4,5)))
+  filter(!(id%in% c(4,5)))
 
 
 #------ 1. find complete participants
@@ -60,7 +62,7 @@ df_complete <- df_complete %>%
 #----------- 2. check for normality
 
 #extract residuals
-lm_model <- lm(presence_score ~ arm * hand + factor(id), data = df_complete)
+lm_model <- lm(subitems ~ arm * hand + factor(id), data = df_complete)
 
 #get residuals
 res <- residuals(lm_model)
@@ -80,7 +82,7 @@ cat("\n=== 2x2 REPEATED-MEASURES ANOVA (parametric path) ===\n")
 
 aov_model <- ezANOVA(
   data = df_complete %>% mutate(id = factor(id)),
-  dv = presence_score,
+  dv = subitems,
   wid = id,
   within = .(arm, hand),   # the TWO factors
   type = 3,
@@ -89,23 +91,6 @@ aov_model <- ezANOVA(
 
 print(aov_model)
 
-#----- desriptive statistics
-
-
-desc <- df_complete %>%
-  group_by(condition) %>%
-  summarise(
-    n = n(),
-    mean_presence = mean(presence_score),
-    sd_presence = sd(presence_score),
-    .groups = "drop"
-  ) %>%
-  mutate(
-    se_presence = sd_presence / sqrt(n),
-    t_crit = qt(0.975, df = n - 1),
-    ci_lower = mean_presence - t_crit * se_presence,
-    ci_upper = mean_presence + t_crit * se_presence
-  )
 
 #--------t-test-----
 #bot residuals is normal and ANOVA is valid, so we schould use t-test
@@ -116,8 +101,8 @@ pairwise_results <- lapply(pairs, function(pair) {
   
   data_wide <- df_complete %>%
     filter(condition %in% pair) %>%
-    select(id, condition, presence_score) %>%
-    pivot_wider(names_from = condition, values_from = presence_score)
+    select(id, condition, subitems) %>%
+    pivot_wider(names_from = condition, values_from = subitems)
   
   t_test <- t.test(
     data_wide[[pair[1]]],
@@ -139,6 +124,24 @@ pairwise_results <- lapply(pairs, function(pair) {
 
 pairwise_df <- bind_rows(pairwise_results)
 print(pairwise_df)
+
+#----- desriptive statistics
+
+
+desc <- df_complete %>%
+  group_by(condition) %>%
+  summarise(
+    n = n(),
+    mean_presence = mean(subitems),
+    sd_presence = sd(subitems),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    se_presence = sd_presence / sqrt(n),
+    t_crit = qt(0.975, df = n - 1),
+    ci_lower = mean_presence - t_crit * se_presence,
+    ci_upper = mean_presence + t_crit * se_presence
+  )
 
 
 
@@ -166,10 +169,10 @@ desc$condition <- factor(
 
 
 
-y_max <- max(df_complete$presence_score, na.rm = TRUE)
+y_max <- max(df_complete$subitems, na.rm = TRUE)
 
 
-p <- ggplot(df_complete, aes(x = condition, y = presence_score)) +
+p <- ggplot(df_complete, aes(x = condition, y = subitems)) +
   
   
   #individual data points
@@ -182,10 +185,10 @@ p <- ggplot(df_complete, aes(x = condition, y = presence_score)) +
   
   # CONNECTED LINES PER PARTICIPANT
   #geom_line(
-   # aes(group = id),
-    #color = "grey70",
-    #linewidth = 0.6,
-    #alpha = 0.6
+  # aes(group = id),
+  #color = "grey70",
+  #linewidth = 0.6,
+  #alpha = 0.6
   #) +
   
   #mean point
@@ -228,12 +231,12 @@ p <- ggplot(df_complete, aes(x = condition, y = presence_score)) +
     
   ) +
   labs(
-    title = "Presence Scores Across Conditions",
+    title = "Presence Sub Scores Across Conditions",
     x = "Condition",
-    y = "Presence Score"
+    y = "Presence Sub Score"
   ) +
   
-  theme_minimal(base_size = 13)+
+    theme_minimal(base_size = 13)+
   theme(
     plot.title = element_text(size = 18, face = "bold"),
     axis.title.x = element_text(size = 16),
@@ -241,7 +244,30 @@ p <- ggplot(df_complete, aes(x = condition, y = presence_score)) +
     axis.text.x = element_text(size = 16),  # x-axis values
     axis.text.y = element_text(size = 16)   # y-axis values
     
-  )
+  )+
+    annotate(
+    "segment",
+    x = 1, xend = 4,
+    y = y_max + 0.3, yend = y_max + 0.3
+  ) +
+  
+  # second line
+  annotate(
+    "segment",
+    x = 2, xend = 4,
+    y = y_max + 0.5, yend = y_max + 0.5
+  )+
+  geom_text(
+    aes(x = 3, y = y_max + 0.55, label = "*"),
+    size = 6,
+    inherit.aes = FALSE
+  )+
 
+geom_text(
+  aes(x = 2.5, y = y_max + 0.35, label = "*"),
+  size = 6,
+  inherit.aes = FALSE
+)
 
 print(p)
+

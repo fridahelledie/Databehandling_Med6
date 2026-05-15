@@ -322,12 +322,12 @@ p <- ggplot(df_complete, aes(x = condition, y = change)) +
   ) +
   
   # CONNECTED LINES PER PARTICIPANT
-  geom_line(
-    aes(group = id),
-    color = "grey70",
-    linewidth = 0.6,
-    alpha = 0.6
-  ) +
+  #geom_line(
+   # aes(group = id),
+    #color = "grey70",
+    #linewidth = 0.6,
+    #alpha = 0.6
+  #) +
   
   #mean point
   geom_point(
@@ -365,7 +365,7 @@ p <- ggplot(df_complete, aes(x = condition, y = change)) +
     inherit.aes = FALSE,
     hjust = +1.8,
     fontface = "bold",
-    size = 4
+    size = 6
     
   ) +
   labs(
@@ -375,7 +375,16 @@ p <- ggplot(df_complete, aes(x = condition, y = change)) +
   ) +
   
   
-  theme_minimal(base_size = 13)
+  theme_minimal(base_size = 13)+
+theme(
+  plot.title = element_text(size = 18, face = "bold"),
+  axis.title.x = element_text(size = 16),
+  axis.title.y = element_text(size = 16),
+  axis.text.x = element_text(size = 16),  # x-axis values
+  axis.text.y = element_text(size = 16)   # y-axis values
+  
+)
+
 
 #significance annotation
 p_final <- p + geom_segment(
